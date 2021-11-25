@@ -2,8 +2,10 @@ import logging
 from dotenv import dotenv_values
 
 import telegram as tg
-from telegram import Update, ForceReply
+from telegram import Update, ForceReply, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+from state import Dialog, SizeEnum, PaymentEnum, ConfirmEnum
 
 API_TOKEN = dotenv_values(".env")['API_TOKEN']
 
@@ -18,16 +20,27 @@ def start_command(update: Update, context: CallbackContext) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
+    id = update.effective_user.id
+    if id not in dialogs:
+        dialogs[id] = Dialog(update.effective_user.send_message)
 
-def help_command(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Help!')
+    d = dialogs[id]
+    d.on_start_trigger()
 
 
-def echo(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(update.message.text)
+dialogs = {}
 
 
-def main() -> None:
+def on_text_message(update: Update, context: CallbackContext) -> None:
+    id = update.effective_user.id
+    if id not in dialogs:
+        dialogs[id] = Dialog(update.effective_user.send_message)
+
+    d = dialogs[id]
+    d.handle_message(update.message.text)
+
+
+def setup_bot() -> None:
     logging.info('Connected bot: @%s' % tg.Bot(API_TOKEN).get_me()['username'])
 
     updater = Updater(API_TOKEN)
@@ -35,14 +48,11 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start_command))
-    dispatcher.add_handler(CommandHandler("help", help_command))
-
-    dispatcher.add_handler()
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, on_text_message))
 
     updater.start_polling()
     updater.idle()
 
 
 if __name__ == '__main__':
-    main()
+    setup_bot()
