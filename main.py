@@ -25,6 +25,7 @@ def start_command(update: Update, context: CallbackContext) -> None:
         dialogs[id] = Dialog(update.effective_user.send_message)
 
     d = dialogs[id]
+    d.machine.set_state('start')
     d.on_start_trigger()
 
 

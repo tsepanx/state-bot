@@ -1,5 +1,13 @@
 from transitions import Machine, State, Transition
-from telegram import Chat
+from telegram import Chat, ReplyKeyboardMarkup
+
+
+def get_reply_keyboard(buttons_list):
+    keyboard = ReplyKeyboardMarkup.from_row(buttons_list)
+    keyboard.one_time_keyboard = True
+    keyboard.selective = True
+    keyboard.resize_keyboard = True
+    return keyboard
 
 
 class SizeEnum:
@@ -23,6 +31,7 @@ class PizzaOrder:
         self.pay_method = None
 
 
+# decorator
 def print_func(func):
     def wrapper(*args, **kwargs):
         print(func.__name__)
@@ -39,11 +48,19 @@ class Dialog(object):
     ConfirmState = State(name='confirm')
     FinalState = State(name='final')
 
+    keyboard_markups = {
+        'size': [SizeEnum.SMALL, SizeEnum.BIG],
+        'pay': [PaymentEnum.CARD, PaymentEnum.CASH],
+        'confirm': [ConfirmEnum.NO, ConfirmEnum.YES],
+        'final': None
+    }
+
+    cur_reply_keyboard = None
+
     def __init__(self, send_message_func):
         self.send_message = send_message_func
         self.pizza_order = PizzaOrder()
 
-        # self.StartState.
         self.SizeState.on_enter = [self.on_size_state]
         self.PayState.on_enter = [self.on_pay_state]
         self.ConfirmState.on_enter = [self.on_confirm_state]
@@ -73,28 +90,39 @@ class Dialog(object):
 
         flag = False
         for i in transitions_map:
-            # import pdb;pdb.set_trace()
             if text.lower() == i[0] and self.state == i[1].name:
                 i[2].__call__()
                 flag = True
         if not flag:
             self.send_message('Wrong answer, try again')
 
+    def update_keyboard_markup(self):
+        buttons_list = self.keyboard_markups[self.state]
+
+        if not buttons_list: self.cur_reply_keyboard = None; return
+
+        self.cur_reply_keyboard = get_reply_keyboard(buttons_list)
+
     def on_size_state(self):
-        self.send_message('Какую вы хотите пиццу? Большую или маленькую?')
+        self.update_keyboard_markup()
+        self.send_message('Какую вы хотите пиццу? Большую или маленькую?', reply_markup=self.cur_reply_keyboard)
 
     def on_pay_state(self):
-        self.send_message('Как вы будете платить?')
+        self.update_keyboard_markup()
+        self.send_message('Как вы будете платить?', reply_markup=self.cur_reply_keyboard)
 
     def on_confirm_state(self):
-        self.send_message(f'Вы хотите {self.pizza_order.size} пиццу, оплата - {self.pizza_order.pay_method}?')
+        self.update_keyboard_markup()
+        self.send_message(f'Вы хотите {self.pizza_order.size} пиццу, оплата - {self.pizza_order.pay_method}?', reply_markup=self.cur_reply_keyboard)
 
     def on_final_state(self):
-        self.send_message('Спасибо за заказ')
+        self.update_keyboard_markup()
+        self.cur_reply_keyboard = None
+        self.send_message('Спасибо за заказ', reply_markup=self.cur_reply_keyboard)
 
     # ---
 
-    # @print_func
+    @print_func
     def on_big_chosen(self):
         self.send_message(f'Вы выбрали большую пиццу')
         self.pizza_order.size = SizeEnum.BIG
