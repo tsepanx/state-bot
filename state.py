@@ -31,14 +31,14 @@ class PizzaOrder:
         self.pay_method = None
 
 
-
 class Dialog(object):
-    StartState = State(name='start') # A start state purposed to invoke it's transition manually (on_start_trigger)
+    StartState = State(name='start')  # A start state purposed to invoke it's transition manually (on_start_trigger)
     SizeState = State(name='size')
     PayState = State(name='pay')
     ConfirmState = State(name='confirm')
     FinalState = State(name='final')
 
+    # Possible keyboards showing on each state
     keyboard_markups = {
         'size': [SizeEnum.SMALL, SizeEnum.BIG],
         'pay': [PaymentEnum.CARD, PaymentEnum.CASH],
@@ -76,7 +76,7 @@ class Dialog(object):
     def handle_message(self, text: str):
         """
         A basic method that is the only input passing to Dialog class
-        It may be either user messages or strings written manually or from tests 
+        It may be either user messages or strings written manually from tests
         """
 
         transitions_map = [
@@ -95,12 +95,9 @@ class Dialog(object):
                 i[2].__call__()
                 flag = True
         if not flag:
-            self.send_message('Wrong answer, try again')
+            self.send_message('Неправильный ввод, попробуйте еще раз')
 
     def update_keyboard_markup(self):
-        """
-        Update reply keyboard with current state
-        """
         buttons_list = self.keyboard_markups[self.state]
 
         if not buttons_list: self.cur_reply_keyboard = None; return
@@ -110,32 +107,43 @@ class Dialog(object):
     # --- Methods invoked on entering one of the state
 
     def on_size_state(self):
+        text = 'Какую вы хотите пиццу? Большую или маленькую?'
+
         self.update_keyboard_markup()
-        self.send_message('Какую вы хотите пиццу? Большую или маленькую?', reply_markup=self.cur_reply_keyboard)
+        self.send_message(text, reply_markup=self.cur_reply_keyboard)
 
     def on_pay_state(self):
+        text = 'Как вы будете платить?'
+
         self.update_keyboard_markup()
-        self.send_message('Как вы будете платить?', reply_markup=self.cur_reply_keyboard)
+        self.send_message(text, reply_markup=self.cur_reply_keyboard)
 
     def on_confirm_state(self):
+        text = f'Вы хотите {self.pizza_order.size} пиццу, оплата - {self.pizza_order.pay_method}?'
+
         self.update_keyboard_markup()
-        self.send_message(f'Вы хотите {self.pizza_order.size} пиццу, оплата - {self.pizza_order.pay_method}?', reply_markup=self.cur_reply_keyboard)
+        self.send_message(text, reply_markup=self.cur_reply_keyboard)
 
     def on_final_state(self):
-        self.update_keyboard_markup()
-        self.cur_reply_keyboard = None
-        self.send_message('Спасибо за заказ', reply_markup=self.cur_reply_keyboard)
+        text = 'Спасибо за заказ'
 
-    # --- Methods called invoked manually for every needed transition
+        self.update_keyboard_markup()
+        self.send_message(text, reply_markup=self.cur_reply_keyboard)
+
+    # --- Methods called manually for every needed transition
 
     def on_big_chosen(self):
-        self.send_message(f'Вы выбрали большую пиццу')
+        text = 'Вы выбрали большую пиццу'
+
+        self.send_message(text)
         self.pizza_order.size = SizeEnum.BIG
         self.on_big_chosen_trigger()
         return True
 
     def on_small_chosen(self):
-        self.send_message(f'Вы выбрали маленькую пиццу')
+        text = 'Вы выбрали маленькую пиццу'
+
+        self.send_message(text)
         self.pizza_order.size = SizeEnum.SMALL
         self.on_small_chosen_trigger()
         return True
