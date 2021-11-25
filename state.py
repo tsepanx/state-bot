@@ -1,5 +1,5 @@
-from transitions import Machine, State, Transition
-from telegram import Chat, ReplyKeyboardMarkup
+from transitions import Machine, State
+from telegram import ReplyKeyboardMarkup
 
 
 def get_reply_keyboard(buttons_list):
@@ -31,18 +31,9 @@ class PizzaOrder:
         self.pay_method = None
 
 
-# decorator
-def print_func(func):
-    def wrapper(*args, **kwargs):
-        print(func.__name__)
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
 
 class Dialog(object):
-    StartState = State(name='start')
+    StartState = State(name='start') # A start state purposed to invoke it's transition manually (on_start_trigger)
     SizeState = State(name='size')
     PayState = State(name='pay')
     ConfirmState = State(name='confirm')
@@ -69,15 +60,25 @@ class Dialog(object):
         states = [self.StartState, self.SizeState, self.PayState, self.ConfirmState, self.FinalState]
         self.machine = Machine(model=self, states=states, initial=self.StartState)
 
-        self.machine.add_transition('on_start_trigger', source='start', dest='size')
-        self.machine.add_transition('on_big_chosen_trigger', source='size', dest='pay')
-        self.machine.add_transition('on_small_chosen_trigger', 'size', 'pay')
-        self.machine.add_transition('on_cash_chosen_trigger', 'pay', 'confirm')
-        self.machine.add_transition('on_card_chosen_trigger', 'pay', 'confirm')
-        self.machine.add_transition('on_confirmed_trigger', 'confirm', 'final')
-        self.machine.add_transition('on_cancelled_trigger', 'confirm', 'size')
+        """
+        For every method starts with "on_", the following code will create additional one with suffix "_trigger"
+        This is to invoke transitions for self.machine object
+        """
+
+        self.machine.add_transition('on_start_trigger',         'start',    'size')
+        self.machine.add_transition('on_big_chosen_trigger',    'size',     'pay')
+        self.machine.add_transition('on_small_chosen_trigger',  'size',     'pay')
+        self.machine.add_transition('on_cash_chosen_trigger',   'pay',      'confirm')
+        self.machine.add_transition('on_card_chosen_trigger',   'pay',      'confirm')
+        self.machine.add_transition('on_confirmed_trigger',     'confirm',  'final')
+        self.machine.add_transition('on_cancelled_trigger',     'confirm',  'size')
 
     def handle_message(self, text: str):
+        """
+        A basic method that is the only input passing to Dialog class
+        It may be either user messages or strings written manually or from tests 
+        """
+
         transitions_map = [
             # Income text       Necessary state     Call on appropriate state
             (SizeEnum.SMALL,    self.SizeState,     self.on_small_chosen),
@@ -97,11 +98,16 @@ class Dialog(object):
             self.send_message('Wrong answer, try again')
 
     def update_keyboard_markup(self):
+        """
+        Update reply keyboard with current state
+        """
         buttons_list = self.keyboard_markups[self.state]
 
         if not buttons_list: self.cur_reply_keyboard = None; return
 
         self.cur_reply_keyboard = get_reply_keyboard(buttons_list)
+
+    # --- Methods invoked on entering one of the state
 
     def on_size_state(self):
         self.update_keyboard_markup()
@@ -120,40 +126,34 @@ class Dialog(object):
         self.cur_reply_keyboard = None
         self.send_message('Спасибо за заказ', reply_markup=self.cur_reply_keyboard)
 
-    # ---
+    # --- Methods called invoked manually for every needed transition
 
-    @print_func
     def on_big_chosen(self):
         self.send_message(f'Вы выбрали большую пиццу')
         self.pizza_order.size = SizeEnum.BIG
         self.on_big_chosen_trigger()
         return True
 
-    @print_func
     def on_small_chosen(self):
         self.send_message(f'Вы выбрали маленькую пиццу')
         self.pizza_order.size = SizeEnum.SMALL
         self.on_small_chosen_trigger()
         return True
 
-    @print_func
     def on_cash_chosen(self):
         self.pizza_order.pay_method = PaymentEnum.CASH
         self.on_cash_chosen_trigger()
         return True
 
-    @print_func
     def on_card_chosen(self):
         self.pizza_order.pay_method = PaymentEnum.CARD
         self.on_card_chosen_trigger()
         return True
 
-    @print_func
     def on_confirmed(self):
         self.on_confirmed_trigger()
         return True
 
-    @print_func
     def on_cancelled(self):
         self.on_cancelled_trigger()
         return True
