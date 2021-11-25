@@ -157,13 +157,3 @@ class Dialog(object):
     def on_cancelled(self):
         self.on_cancelled_trigger()
         return True
-
-
-if __name__ == "__main__":
-    d = Dialog(print)
-    print(d.state)
-    d.on_start_trigger()
-    print(d.state)
-    d.handle_message('Большую')
-    print(d.state)
-    import pdb;pdb.set_trace()
