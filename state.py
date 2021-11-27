@@ -73,10 +73,18 @@ class Dialog(object):
         self.machine.add_transition('on_confirmed_trigger',     'confirm',  'final')
         self.machine.add_transition('on_cancelled_trigger',     'confirm',  'size')
 
+    def reset(self):
+        """
+        Reset current state to 'start', and call start trigger
+        """
+        self.machine.set_state('start')
+        self.on_start_trigger()
+
     def handle_message(self, text: str):
         """
-        A basic method that is the only input passing to Dialog class
-        It may be either user messages or strings written manually from tests
+        A method that process input passing to Dialog object
+
+        :param text: May be either user messages or strings written manually from tests
         """
 
         transitions_map = [

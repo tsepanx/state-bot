@@ -30,16 +30,15 @@ def start_command(update: Update, context: CallbackContext) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
-    d = get_user_dialog(user)
-
-    d.machine.set_state('start')
-    d.on_start_trigger()
+    dialog = get_user_dialog(user)
+    dialog.reset()
 
 
 def on_text_message(update: Update, context: CallbackContext) -> None:
-    d = get_user_dialog(update.effective_user)
+    user = update.effective_user
 
-    d.handle_message(update.message.text)
+    dialog = get_user_dialog(user)
+    dialog.handle_message(update.message.text)
 
 
 def setup_bot() -> None:
