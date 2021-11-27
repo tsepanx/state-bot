@@ -1,16 +1,26 @@
 import logging
-from dotenv import dotenv_values
 
+from dotenv import dotenv_values
 import telegram as tg
-from telegram import Update, ForceReply, ReplyKeyboardMarkup
+from telegram import Update, ForceReply, User
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-from state import Dialog, SizeEnum, PaymentEnum, ConfirmEnum
+from state import Dialog
 
 API_TOKEN = dotenv_values(".env")['API_TOKEN']
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+dialogs = {}
+
+
+def get_user_dialog(user: User):
+    if user.id not in dialogs:
+        dialogs[user.id] = Dialog(user.send_message)
+
+    return dialogs[user.id]
 
 
 def start_command(update: Update, context: CallbackContext) -> None:
@@ -20,24 +30,15 @@ def start_command(update: Update, context: CallbackContext) -> None:
         reply_markup=ForceReply(selective=True),
     )
 
-    id = update.effective_user.id
-    if id not in dialogs:
-        dialogs[id] = Dialog(update.effective_user.send_message)
+    d = get_user_dialog(user)
 
-    d = dialogs[id]
     d.machine.set_state('start')
     d.on_start_trigger()
 
 
-dialogs = {}
-
-
 def on_text_message(update: Update, context: CallbackContext) -> None:
-    id = update.effective_user.id
-    if id not in dialogs:
-        dialogs[id] = Dialog(update.effective_user.send_message)
+    d = get_user_dialog(update.effective_user)
 
-    d = dialogs[id]
     d.handle_message(update.message.text)
 
 
