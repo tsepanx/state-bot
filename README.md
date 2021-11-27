@@ -1,11 +1,23 @@
 # state-bot
 
-### Setup
+## Setup
 
-rename `prod.env` to `.env` and set `API_TOKEN` with your key
+### Virtual environment
 
-### Testing
-
+```shell
+$ virtualenv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
 ```
-python -m pytest tests.py
+
+### Env config
+Create `.env` file and set `API_TOKEN` with your token
+```dotenv
+API_TOKEN = "1111111111:AAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+```
+
+## Run tests
+
+```shell
+$ python -m pytest tests.py
 ```
